@@ -1,69 +1,34 @@
 import TodoItem from './components/TodoItem';
 import { useEffect, useMemo, useState, useRef } from 'react';
-
+import { useStore } from './store';
+import { actions } from './store';
+import axios from 'axios';
 function Todo() {
   const [title, setTitle] = useState('');
-  const [todos, setTodos] = useState([]);
+  const [state, dispatch] = useStore();
+  const { todos } = state;
 
   let titleElement = useRef();
   // Add new Todo
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     titleElement.current.value = '';
-    fetch('http://localhost:5000/todos', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-      body: JSON.stringify({
-        title,
-        completed: false,
-      }),
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        setTodos([...todos, result]);
-      });
+    let res = await axios.post('http://localhost:5000/todos', {
+      title,
+      completed: false,
+    });
+    dispatch(actions.addTodo(res.data));
   };
 
   //Get all todo from mock api
   useEffect(() => {
-    fetch('http://localhost:5000/todos')
-      .then((res) => res.json())
-      .then((results) => {
-        console.log(results);
-        setTodos(results);
-      });
-  }, []);
-
-  const deleteTodo = (id) => {
-    fetch(`http://localhost:5000/todos/${id}`, {
-      method: 'DELETE',
-    }).then(() => {
-      setTodos((prevTodos) => {
-        return prevTodos.filter((todo) => todo.id !== id);
-      });
-    });
-  };
-
-  const handleChangeStatus = (todo) => {
-    fetch(`http://localhost:5000/todos/${todo.id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'PUT',
-      body: JSON.stringify({
-        ...todo,
-        completed: !todo.completed,
-      }),
-    }).then(() => {
-      setTodos((prevTodos) => {
-        return prevTodos.map((prev) =>
-          prev.id === todo.id ? { ...prev, completed: !todo.completed } : prev
-        );
-      });
-    });
-  };
+    async function getAllTodos() {
+      let res = await axios.get('http://localhost:5000/todos');
+      let todos = res.data;
+      dispatch(actions.getAllTodos(todos));
+    }
+    getAllTodos();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // calculate task
   let totalTask = useMemo(() => todos.length, [todos]);
@@ -115,8 +80,6 @@ function Todo() {
                     id={todo.id}
                     title={todo.title}
                     completed={todo.completed}
-                    onDelete={deleteTodo}
-                    onChangeStatus={handleChangeStatus}
                   />
                 ))}
             </ul>

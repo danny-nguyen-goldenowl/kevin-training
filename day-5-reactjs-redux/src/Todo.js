@@ -1,72 +1,30 @@
 import TodoItem from './components/TodoItem';
 import { useEffect, useMemo, useState, useRef } from 'react';
-
+import { useDispatch, useSelector } from 'react-redux';
+import { addTodo, getAllTodos } from './store/actions/todoAction';
 function Todo() {
+  const dispatch = useDispatch();
+  const todos = useSelector((state) => state.todo.todos);
   const [title, setTitle] = useState('');
-  const [todos, setTodos] = useState([]);
-
   let titleElement = useRef();
+
   // Add new Todo
   const handleSubmit = (e) => {
     e.preventDefault();
     titleElement.current.value = '';
-    fetch('http://localhost:5000/todos', {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'POST',
-      body: JSON.stringify({
-        title,
-        completed: false,
-      }),
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        setTodos([...todos, result]);
-      });
+    dispatch(addTodo({ title, completed: false }));
   };
 
-  //Get all todo from mock api
+  // Get all todo from mock api
   useEffect(() => {
-    fetch('http://localhost:5000/todos')
-      .then((res) => res.json())
-      .then((results) => {
-        console.log(results);
-        setTodos(results);
-      });
-  }, []);
-
-  const deleteTodo = (id) => {
-    fetch(`http://localhost:5000/todos/${id}`, {
-      method: 'DELETE',
-    }).then(() => {
-      setTodos((prevTodos) => {
-        return prevTodos.filter((todo) => todo.id !== id);
-      });
-    });
-  };
-
-  const handleChangeStatus = (todo) => {
-    fetch(`http://localhost:5000/todos/${todo.id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      method: 'PUT',
-      body: JSON.stringify({
-        ...todo,
-        completed: !todo.completed,
-      }),
-    }).then(() => {
-      setTodos((prevTodos) => {
-        return prevTodos.map((prev) =>
-          prev.id === todo.id ? { ...prev, completed: !todo.completed } : prev
-        );
-      });
-    });
-  };
+    dispatch(getAllTodos());
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // calculate task
-  let totalTask = useMemo(() => todos.length, [todos]);
+  let totalTask = useMemo(
+    () => (todos.length !== 0 ? todos.length : 0),
+    [todos]
+  );
   let completedTask = useMemo(() => {
     return todos.length !== 0
       ? todos.filter((todo) => todo.completed === true).length
@@ -109,14 +67,12 @@ function Todo() {
             </div>
             <ul className="mt-2">
               {todos &&
-                todos.map((todo) => (
+                todos.map((todo, index) => (
                   <TodoItem
-                    key={todo.id}
+                    key={index}
                     id={todo.id}
                     title={todo.title}
                     completed={todo.completed}
-                    onDelete={deleteTodo}
-                    onChangeStatus={handleChangeStatus}
                   />
                 ))}
             </ul>
